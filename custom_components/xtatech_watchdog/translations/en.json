@@ -1,0 +1,34 @@
+{
+  "title": "Xtatech ONT Watchdog",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect your Xtatech watchdog",
+        "description": "Install the HA firmware variant, then open its Home Assistant web page to find the API key. Enter the local host without http://.",
+        "data": {"host": "IP address or hostname", "port": "Port", "api_key": "API key", "scan_interval": "Polling interval (seconds)"}
+      },
+      "reconfigure": {
+        "title": "Update device connection",
+        "description": "Enter the current address and API key for the same watchdog.",
+        "data": {"host": "IP address or hostname", "port": "Port", "api_key": "API key", "scan_interval": "Polling interval (seconds)"}
+      },
+      "reauth_confirm": {
+        "title": "Reconnect your watchdog",
+        "description": "Enter the current API key from the device's Home Assistant web page.",
+        "data": {"host": "IP address or hostname", "port": "Port", "api_key": "API key", "scan_interval": "Polling interval (seconds)"}
+      }
+    },
+    "error": {
+      "invalid_auth": "The API key was rejected.",
+      "cannot_connect": "Cannot reach the watchdog. Check its address, power and network.",
+      "unsupported_firmware": "The device did not return a supported API. Install the HA firmware variant.",
+      "invalid_input": "Enter a valid host, port and 32-character hexadecimal API key.",
+      "wrong_device": "This is a different watchdog. Add it as a separate integration instead."
+    },
+    "abort": {
+      "already_configured": "This watchdog is already configured.",
+      "reconfigure_successful": "Device connection updated.",
+      "reauth_successful": "Device connection updated."
+    }
+  }
+}

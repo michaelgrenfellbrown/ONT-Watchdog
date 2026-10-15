@@ -1,0 +1,8 @@
+{
+    "firmware_version":  "1.1.0-ha",
+    "integration_version":  "1.0.0",
+    "api_version":  1,
+    "firmware_sha256":  "888490A8A18C336C00A3A64C73300ACC7CD30982F52D0352C5FCFE5C84B6105F",
+    "source_directory":  "ONT_Watchdog_ESP8266_HA",
+    "repository":  "https://github.com/michaelgrenfellbrown/ONT-Watchdog"
+}

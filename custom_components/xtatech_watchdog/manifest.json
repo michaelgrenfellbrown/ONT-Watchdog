@@ -1,0 +1,16 @@
+{
+    "domain":  "xtatech_watchdog",
+    "name":  "Xtatech ONT Watchdog",
+    "codeowners":  [
+                       "@michaelgrenfellbrown"
+                   ],
+    "config_flow":  true,
+    "documentation":  "https://github.com/michaelgrenfellbrown/ONT-Watchdog",
+    "integration_type":  "device",
+    "iot_class":  "local_polling",
+    "issue_tracker":  "https://github.com/michaelgrenfellbrown/ONT-Watchdog/issues",
+    "requirements":  [
+
+                     ],
+    "version":  "1.0.0"
+}
