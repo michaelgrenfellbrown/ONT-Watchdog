@@ -4,9 +4,11 @@
 
 The Home Assistant edition is a separate copy in [ONT_Watchdog_ESP8266_HA](ONT_Watchdog_ESP8266_HA/ONT_Watchdog_ESP8266_HA.ino). The original ESP8266 sketch remains unchanged, with a preserved source/binary build in [builds/esp8266-standalone-2026-10-15.zip](builds/esp8266-standalone-2026-10-15.zip).
 
-The custom integration is in `custom_components/xtatech_watchdog/`, with HACS metadata at the repository root. It provides network/connectivity sensors, logs, throughput results, restart/speed-test buttons and timing controls over a local API. Follow the [Home Assistant installation guide](docs/HOME_ASSISTANT.md) for flashing, API-key setup and HACS installation. Repository metadata targets `michaelgrenfellbrown/ONT-Watchdog`; HACS downloading requires that repository to be published first.
+The custom integration is in `custom_components/xtatech_watchdog/`, with HACS metadata at the repository root. It provides network/connectivity sensors, logs, throughput results, restart/speed-test buttons and timing controls over a local API. Follow the [Home Assistant installation guide](docs/HOME_ASSISTANT.md) for flashing, API-key setup and HACS installation. In HACS, add [michaelgrenfellbrown/ONT-Watchdog](https://github.com/michaelgrenfellbrown/ONT-Watchdog) as a custom repository of type **Integration**, download it, restart Home Assistant, and add **Xtatech ONT Watchdog** under Devices & services.
 
 ## Original Firmware
+
+This project is licensed under [GPL-3.0](LICENSE).
 
 Arduino firmware for an ESP32-C3 Mini V2 that monitors internet connectivity and briefly opens two normally-closed relay paths to power-cycle an ONT first, then a router.
 

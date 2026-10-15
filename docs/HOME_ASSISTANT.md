@@ -14,9 +14,9 @@ The watchdog, relay sequence, TFT, local web pages, logs and speed test continue
 
 ## HACS Installation
 
-Prepared repository identity: `michaelgrenfellbrown/ONT-Watchdog`. The repository must first be **created and published on GitHub**; locally generated files and ZIPs alone are not downloadable by HACS. Publication is not the same as being listed in the default HACS catalog.
+Published repository: [michaelgrenfellbrown/ONT-Watchdog](https://github.com/michaelgrenfellbrown/ONT-Watchdog). It is a public custom HACS repository, not a listing in the default HACS catalog. The default branch is `codex/home-assistant-integration`.
 
-Once the repository is published:
+Install through HACS:
 
 1. In HACS, open **Custom repositories**.
 2. Add `https://github.com/michaelgrenfellbrown/ONT-Watchdog` with type **Integration**.
@@ -26,7 +26,7 @@ Once the repository is published:
 
 Minimum declared Home Assistant version is 2025.8.0. The code uses Home Assistant's shared aiohttp session and DataUpdateCoordinator. This project has not yet been installation-tested on a live Home Assistant instance. Local tests cover actual HTTP exchanges with a fake device plus HA-facing logic with interface doubles; they do not prove compatibility with every Home Assistant release. GitHub CI includes HACS and hassfest validation, which runs after publication. HACS brand registration is omitted for this custom repository; the validation job ignores only that check.
 
-As an alternative before publication, the prepared integration ZIP contains `custom_components/xtatech_watchdog/`. Extract that directory into Home Assistant's `/config/custom_components/`, restart Home Assistant and add the integration through the same setup flow. HACS does not install a local ZIP; this is manual installation.
+As an alternative to HACS, the integration ZIP in `builds/` contains `custom_components/xtatech_watchdog/`. Extract that directory into Home Assistant's `/config/custom_components/`, restart Home Assistant and add the integration through the same setup flow. HACS does not install a local ZIP; this is manual installation.
 
 ## Entities
 
@@ -64,6 +64,8 @@ The API uses local HTTP. The existing local portal has no login and its Home Ass
 If the address changes, use **Reconfigure** on the integration entry. If the key changes, use the reauthentication flow. The integration refuses to silently switch to a different device if an old IP is reassigned.
 
 ## Publishing and Validation
+
+The project uses GPL-3.0, selected by the repository owner. The complete license is in the repository's `LICENSE` file and is included in the integration package.
 
 The repository root must contain `hacs.json`, this project's README and `custom_components/xtatech_watchdog/`, not another enclosing folder. The manifest already targets `michaelgrenfellbrown/ONT-Watchdog`. Create it as a public GitHub repository with a short description and topics such as `home-assistant`, `hacs`, `esp8266` and `watchdog`. See the [HACS publishing requirements](https://hacs.dev/docs/publish/start/) and [integration layout](https://www.hacs.dev/docs/publish/integration/).
 

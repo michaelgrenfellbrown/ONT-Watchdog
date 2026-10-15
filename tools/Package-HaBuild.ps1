@@ -18,11 +18,13 @@ $metadata = [ordered]@{
 $json = $metadata | ConvertTo-Json
 [System.IO.File]::WriteAllText((Join-Path $buildPath 'build.json'), $json + [Environment]::NewLine, [System.Text.UTF8Encoding]::new($false))
 $sourceFiles = Get-ChildItem -LiteralPath (Join-Path $root 'ONT_Watchdog_ESP8266_HA') -File
+if (Test-Path -LiteralPath (Join-Path $root 'LICENSE')) { $sourceFiles += Get-Item -LiteralPath (Join-Path $root 'LICENSE') }
 Compress-Archive -LiteralPath $sourceFiles.FullName -DestinationPath (Join-Path $buildPath 'firmware-source.zip') -Force
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archiveFiles = @(Get-ChildItem -LiteralPath (Join-Path $root 'custom_components') -Recurse -File | Where-Object { $_.FullName -notmatch '[\\/]__pycache__[\\/]' })
 $archiveFiles += Get-Item -LiteralPath (Join-Path $root 'hacs.json'), (Join-Path $root 'README.md'), (Join-Path $root 'docs\HOME_ASSISTANT.md')
+if (Test-Path -LiteralPath (Join-Path $root 'LICENSE')) { $archiveFiles += Get-Item -LiteralPath (Join-Path $root 'LICENSE') }
 $archiveStream = [System.IO.File]::Open((Join-Path $root 'builds\xtatech-watchdog-ha-integration-1.0.0.zip'), [System.IO.FileMode]::Create)
 $archive = [System.IO.Compression.ZipArchive]::new($archiveStream, [System.IO.Compression.ZipArchiveMode]::Create)
 try {
