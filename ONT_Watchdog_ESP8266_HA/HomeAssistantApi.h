@@ -1,6 +1,6 @@
 #pragma once
 
-constexpr const char *HA_FIRMWARE_VERSION = "1.1.0-ha";
+constexpr const char *HA_FIRMWARE_VERSION = "1.2.0-ha";
 
 String homeAssistantDeviceId() {
   return "xtatech-" + String(ESP.getChipId(), HEX);
@@ -47,7 +47,6 @@ void writeApiConfig(JsonObject config) {
   config["firstSeconds"] = cfg.firstSeconds;
   config["repeatSeconds"] = cfg.repeatSeconds;
   config["rotation"] = cfg.rotation;
-  config["automaticSpeedTest"] = cfg.automaticSpeedTest;
 }
 
 void handleApiState() {
@@ -84,15 +83,6 @@ void handleApiState() {
   JsonArray logs = watchdog["reset_logs"].to<JsonArray>();
   uint8_t oldest = (logNext + LOG_CAPACITY - logCount) % LOG_CAPACITY;
   for (uint8_t i = 0; i < logCount; ++i) logs.add(resetLogs[(oldest + i) % LOG_CAPACITY]);
-  JsonObject speed = doc["speed_test"].to<JsonObject>();
-  speed["busy"] = speedTest.busy();
-  speed["status"] = speedTest.status();
-  speed["has_result"] = speedTest.hasResult();
-  if (speedTest.hasResult()) {
-    speed["download_mbps"] = speedTest.downloadMbps();
-    speed["upload_mbps"] = speedTest.uploadMbps();
-    speed["result_age_seconds"] = speedTest.resultAgeSeconds();
-  }
   writeApiConfig(doc["config"].to<JsonObject>());
   sendApiJson(200, doc);
 }
@@ -120,8 +110,7 @@ void handleApiConfig() {
     String key = pair.key().c_str();
     JsonVariantConst value = pair.value();
     uint32_t number;
-    if (key == "automaticSpeedTest" && value.is<bool>()) candidate.automaticSpeedTest = value.as<bool>();
-    else if (key == "pulseMs" && apiNumber(value, 100, 10000, number)) candidate.pulseMs = number;
+    if (key == "pulseMs" && apiNumber(value, 100, 10000, number)) candidate.pulseMs = number;
     else if (key == "routerDelaySeconds" && apiNumber(value, 1, 120, number)) candidate.routerDelaySeconds = number;
     else if (key == "pingSeconds" && apiNumber(value, 10, 3600, number)) candidate.pingSeconds = number;
     else if (key == "firstSeconds" && apiNumber(value, 60, 86400, number)) candidate.firstSeconds = number;
@@ -132,7 +121,6 @@ void handleApiConfig() {
       return;
     }
   }
-  speedTest.cancel(F("Cancelled: Home Assistant settings changed"));
   Configuration previous = cfg;
   cfg = candidate;
   if (!saveState()) {
@@ -181,16 +169,5 @@ void setupApiRoutes() {
     response["accepted"] = true;
     sendApiJson(202, response);
     startRestart("Home Assistant request");
-  });
-  server.on("/api/v1/speed-test", HTTP_POST, []() {
-    if (!requireApiKey()) return;
-    if (stage != RestartStage::IDLE || !WiFi.isConnected() || speedTest.busy()) {
-      sendApiError(409, "Speed test unavailable or already queued");
-      return;
-    }
-    speedTest.request();
-    JsonDocument response;
-    response["accepted"] = true;
-    sendApiJson(202, response);
   });
 }

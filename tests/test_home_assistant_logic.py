@@ -170,18 +170,27 @@ class HALogicTests(unittest.IsolatedAsyncioTestCase):
     async def test_buttons_disabled_when_busy_or_unavailable(self):
         coordinator = SimpleNamespace(data=self.data, api=self.api, last_update_success=True, async_command=AsyncMock())
         restart = self.button_module.WatchdogButton(coordinator, "restart", "Restart", "mdi:restart")
-        speed = self.button_module.WatchdogButton(coordinator, "speed-test", "Speed", "mdi:speedometer")
-        self.assertNotEqual(restart._attr_unique_id, speed._attr_unique_id)
-        self.assertTrue(restart.available)
-        self.assertTrue(speed.available)
-        self.data["speed_test"]["busy"] = True
-        self.assertFalse(speed.available)
         self.assertTrue(restart.available)
         self.data["watchdog"]["restart_in_progress"] = True
         self.assertFalse(restart.available)
         self.data["watchdog"]["restart_in_progress"] = False
         coordinator.last_update_success = False
         self.assertFalse(restart.available)
+
+    async def test_retired_entities_removed_without_affecting_other_devices_or_current_entities(self):
+        migration = importlib.import_module("watchdog_ha_test.migration")
+        from unittest.mock import Mock
+        registry = SimpleNamespace(async_remove=Mock())
+        device_id = self.data["device"]["id"]
+        retired = [SimpleNamespace(platform="xtatech_watchdog", domain=domain, unique_id=f"{device_id}_{key}", entity_id=f"{domain}.{key}") for domain, key in migration.RETIRED_ENTITIES]
+        kept = [
+            SimpleNamespace(platform="xtatech_watchdog", domain="sensor", unique_id=f"{device_id}_rssi", entity_id="sensor.rssi"),
+            SimpleNamespace(platform="xtatech_watchdog", domain="button", unique_id=f"{device_id}_restart", entity_id="button.restart"),
+            SimpleNamespace(platform="xtatech_watchdog", domain="sensor", unique_id="other-device_download", entity_id="sensor.other_download"),
+            SimpleNamespace(platform="other_integration", domain="sensor", unique_id=f"{device_id}_download", entity_id="sensor.unrelated"),
+        ]
+        migration.remove_retired_entities(registry, retired + kept, device_id)
+        self.assertEqual({call.args[0] for call in registry.async_remove.call_args_list}, {entity.entity_id for entity in retired})
 
     async def test_command_errors_are_user_visible_and_not_retried(self):
         coordinator = self.coordinator_module.WatchdogCoordinator(None, self.entry, self.api)

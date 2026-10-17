@@ -1,0 +1,6 @@
+{
+  "firmware_version": "1.1.0",
+  "firmware_sha256": "84AB46C0D8E3B026514580510AD61F2139DF547BE07AD809CCAA5ACAE1501423",
+  "source_directory": "ONT_Watchdog_ESP8266",
+  "change": "Removed automatic and manual speed testing"
+}

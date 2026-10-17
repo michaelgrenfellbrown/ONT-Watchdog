@@ -21,8 +21,7 @@ STATE = {
     "uptime_seconds": 120,
     "network": {"connected": True, "dhcp": True, "external_ip_fresh": False, "ip": "192.0.2.2", "gateway": "192.0.2.1", "subnet": "255.255.255.0", "dns_primary": "192.0.2.1", "dns_secondary": "0.0.0.0", "ssid": "test", "rssi": -50},
     "watchdog": {"online": False, "restart_in_progress": False, "recovery_mode": False, "storage_ok": True, "outage_seconds": 30, "reset_count": 2, "status": "Offline", "reset_logs": ["#1 | test", "#2 | test"]},
-    "speed_test": {"busy": False, "has_result": False, "status": "Not tested yet"},
-    "config": {"automaticSpeedTest": True, "pulseMs": 1000, "routerDelaySeconds": 5, "pingSeconds": 60, "firstSeconds": 300, "repeatSeconds": 600, "target": "google.com"},
+    "config": {"pulseMs": 1000, "routerDelaySeconds": 5, "pingSeconds": 60, "firstSeconds": 300, "repeatSeconds": 600, "target": "google.com"},
 }
 
 
@@ -68,7 +67,7 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
     async def redirect_target(self, request):
         self.fail("API keys must not be forwarded through redirects")
 
-    async def test_real_http_state_authentication_and_optional_no_speed_result(self):
+    async def test_real_http_state_authentication_without_speed_test_fields(self):
         result = await self.api.state()
         self.assertEqual(result, STATE)
         self.assertEqual(self.requests[0][:3], ("GET", "state", KEY))
@@ -90,15 +89,20 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
             await self.api.command("restart")
         self.assertEqual(len(self.requests), 1)
 
+    async def test_removed_speed_test_command_is_not_sent(self):
+        with self.assertRaises(ValueError):
+            await self.api.command("speed-test")
+        self.assertEqual(self.requests, [])
+
     async def test_conflict_is_not_reported_as_authentication(self):
         self.response_status = 409
         with self.assertRaises(api_module.WatchdogCommandError):
-            await self.api.command("speed-test")
+            await self.api.command("restart")
 
     async def test_partial_settings_do_not_send_cached_settings(self):
         import json
-        await self.api.set_config({"automaticSpeedTest": False})
-        self.assertEqual(json.loads(self.requests[0][3]), {"automaticSpeedTest": False})
+        await self.api.set_config({"pingSeconds": 90})
+        self.assertEqual(json.loads(self.requests[0][3]), {"pingSeconds": 90})
 
     async def test_connection_failure_wrapped(self):
         await self.runner.cleanup()
@@ -125,7 +129,7 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_calls_serialized_to_avoid_loading_esp_with_parallel_connections(self):
         self.delay = 0.02
-        await asyncio.gather(self.api.state(), self.api.command("speed-test"))
+        await asyncio.gather(self.api.state(), self.api.command("restart"))
         self.assertEqual(len(self.requests), 2)
 
 
@@ -136,7 +140,7 @@ class SchemaTests(unittest.TestCase):
             ("watchdog", "online", "false"), ("watchdog", "reset_count", True),
             ("network", "rssi", "-50"), ("watchdog", "reset_logs", "not-a-list"),
             ("watchdog", "reset_logs", ["x"] * 31),
-            ("config", "automaticSpeedTest", 1),
+            ("config", "pingSeconds", True),
         ):
             with self.subTest(section=section, key=key, value=value):
                 data = copy.deepcopy(STATE)
@@ -150,16 +154,6 @@ class SchemaTests(unittest.TestCase):
             data[field] = value
             with self.assertRaises(api_module.WatchdogProtocolError):
                 api_module.validate_state(data)
-
-    def test_optional_completed_measurements_validated(self):
-        data = copy.deepcopy(STATE)
-        data["speed_test"].update(has_result=True, download_mbps=3.1, upload_mbps=1.2, result_age_seconds=4)
-        api_module.validate_state(data)
-        for bad in (float("nan"), float("inf"), -1, True, "3.1"):
-            with self.subTest(bad=bad):
-                data["speed_test"]["download_mbps"] = bad
-                with self.assertRaises(api_module.WatchdogProtocolError):
-                    api_module.validate_state(data)
 
     def test_host_input_cannot_inject_urls_credentials_or_paths(self):
         for host in ("http://192.0.2.1", "user@192.0.2.1", "192.0.2.1/path", "", "a:80", "a?query", "a#fragment"):

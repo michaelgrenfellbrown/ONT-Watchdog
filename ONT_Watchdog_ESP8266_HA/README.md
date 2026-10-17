@@ -1,6 +1,6 @@
 # ESP8266 ONT Watchdog: Home Assistant Edition
 
-This is the independent HA firmware copy. Open `ONT_Watchdog_ESP8266_HA.ino`, keeping all headers in this directory. The original standalone sketch is preserved at `../ONT_Watchdog_ESP8266/` and under `../builds/`. The wiring, TFT layout, watchdog behavior and speed-test features below are inherited from that build.
+This is the independent HA firmware copy. Open `ONT_Watchdog_ESP8266_HA.ino`, keeping all headers in this directory. The current standalone variant is at `../ONT_Watchdog_ESP8266/`; historical builds are preserved under `../builds/`. Both current variants have speed testing removed. Their wiring, TFT layout and watchdog behavior are unchanged.
 
 This variant adds a versioned local JSON API, a persisted device API key and a **Home Assistant** page in the portal. Use that page to find the key after flashing, then configure the HACS custom integration. See [Home Assistant setup and API reference](../docs/HOME_ASSISTANT.md). The old standalone sketch name in the inherited Arduino instructions below should be read as `ONT_Watchdog_ESP8266_HA.ino` for this edition.
 
@@ -69,13 +69,7 @@ The status page also displays the router/default gateway, both configured DNS se
 
 The status page also shows WiFi RSSI in dBm, or Unavailable while disconnected.
 
-## ESP8266 Speed Test
-
-The status page includes **Run Speed Test**, download/upload Mbps, the latest completed result's age, automatic-test countdown, and queued/running/failure status. Tests run on the ESP8266 itself with no browser left open. Automatic tests are enabled by default every five minutes from the previous test's start; disable them with the checkbox in Config. The first automatic test becomes due five minutes after setup. Manual tests use the same queue and reset the automatic schedule when they start. Due tests wait for a successful connectivity ping and never overlap.
-
-Each completed test downloads 512 KiB and uploads 128 KiB of generated data to [Cloudflare's speed-test endpoints](https://github.com/cloudflare/speedtest). At one test every five minutes this is about 180 MiB/day (189 MB/day), plus TLS/HTTP overhead and any manual tests. These are conservative **ESP8266 throughput** figures including DNS/TLS/request overhead, not the full capacity of the ISP connection. Results are limited by the ESP CPU, 2.4 GHz WiFi, sample size, web/display work and TLS. No credentials are sent; the measurement-only TLS client does not verify the server certificate. Rejected HTTP responses, short transfers and timeouts are reported as failed tests.
-
-Downloads are streamed in small loop slices. Connection setup and uploads use synchronous library calls with short timeouts, so web requests can pause during those phases. Connectivity pings pause while a transfer runs and resume afterwards; speed-test results do not change watchdog connectivity or trigger resets. Relay restart requests take priority and cancel tests. The TFT layout is unchanged. Results stay in RAM and disappear on reboot; only ONT/router restart events go into the existing FIFO log. Keep `EspSpeedTest.h` beside the sketch when using Arduino IDE. Built-in HTTP/TLS libraries require no additional installation.
+## Display and Logs
 
 The TFT draws a 56x44 RGB565 version of the supplied XTATECH logo at the bottom right. The logo background blends into the black screen, and existing text coordinates are unchanged. The bottom three lines fit within the space left of the logo: long limit/uptime values lose their space, large reset counts use `R` as the label, and the storage error reads "Flash error". Keep `XtatechTftLogo.h` beside the sketch along with `XtatechLogo.h`. To regenerate the bitmap, run `powershell -File tools/Embed-TftLogo.ps1 -SourcePath "C:\path\to\logo.png"` from the repository root.
 

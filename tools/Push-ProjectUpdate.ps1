@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location -LiteralPath $root
 . (Join-Path $PSScriptRoot 'Check-GitHubAccess.ps1') -Owner 'michaelgrenfellbrown'
-$paths = @('README.md', 'docs/HOME_ASSISTANT.md', 'LICENSE', 'tools', 'builds')
+$paths = @('README.md', 'docs/HOME_ASSISTANT.md', 'LICENSE', 'tools', 'builds', 'ONT_Watchdog_ESP8266', 'ONT_Watchdog_ESP8266_HA', 'custom_components', 'tests')
 & git -c "safe.directory=$root" add -- @paths
 if ($LASTEXITCODE -ne 0) { throw 'Staging failed.' }
 $commitName = if ($githubProfile.name) { $githubProfile.name } else { $githubProfile.login }

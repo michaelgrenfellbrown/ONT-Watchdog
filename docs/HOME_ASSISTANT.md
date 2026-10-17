@@ -1,6 +1,10 @@
 # Xtatech ONT Watchdog for Home Assistant
 
-The standalone ESP8266 build is preserved in `builds/esp8266-standalone-2026-10-15.zip` and its matching unpacked folder. Its original source folder remains `ONT_Watchdog_ESP8266/`. Home Assistant development uses the independent `ONT_Watchdog_ESP8266_HA/` copy.
+The standalone ESP8266 build is preserved in `builds/esp8266-standalone-2026-10-15.zip` and its matching unpacked folder. The current standalone source folder is `ONT_Watchdog_ESP8266/`; speed testing has been removed from both current sketches. Home Assistant development uses the independent `ONT_Watchdog_ESP8266_HA/` copy.
+
+## Upgrade From the Speed-Test Build
+
+Update the integration through HACS, restart Home Assistant, and upload the new firmware to the device. Version 1.1.0 of the integration removes its obsolete speed-test entities automatically; existing dashboards or automations referencing them may need editing. An old firmware image will still run its old speed tests until reflashed. Existing saved speed-test settings are ignored and disappear on the next settings save. WiFi, API key, normal configuration and reset logs are retained when flash is not erased. Historical build archives remain unchanged.
 
 ## Firmware
 
@@ -10,7 +14,7 @@ The standalone ESP8266 build is preserved in `builds/esp8266-standalone-2026-10-
 4. Open the device IP in a browser and choose **Home Assistant**. Note its IP, port `80`, device ID and 32-character API key. The key is generated on first HA-firmware boot and persisted in LittleFS.
 5. Reserve the device's IP in the router's DHCP settings. The integration also supports a resolvable hostname. No MQTT broker is required.
 
-The watchdog, relay sequence, TFT, local web pages, logs and speed test continue working without Home Assistant. Downgrading to the preserved standalone firmware works with the same hardware, but removes the HA API; a subsequent HA upgrade may generate a new API key if the standalone firmware rewrote the settings.
+The watchdog, relay sequence, TFT, local web pages, logs continue working without Home Assistant. Downgrading to the preserved standalone firmware works with the same hardware, but removes the HA API; a subsequent HA upgrade may generate a new API key if the standalone firmware rewrote the settings.
 
 ## HACS Installation
 
@@ -34,17 +38,16 @@ All entities belong to one device and use a stable chip-based identifier, so ren
 
 | Type | Entities |
 | --- | --- |
-| Sensors | Watchdog status, reset count, outage duration, uptime, WiFi RSSI/SSID, local/external IP, router address, subnet, both DNS servers, ping target, download/upload throughput, speed-test status and result age |
-| Binary sensors | Internet/WiFi connectivity, restart in progress, recovery mode, storage problem, speed-test active, DHCP enabled |
-| Buttons | Restart ONT and router in the existing sequence; run speed test |
-| Switch | Automatic speed tests every five minutes |
+| Sensors | Watchdog status, reset count, outage duration, uptime, WiFi RSSI/SSID, local/external IP, router address, subnet, both DNS servers, ping target |
+| Binary sensors | Internet/WiFi connectivity, restart in progress, recovery mode, storage problem, DHCP enabled |
+| Buttons | Restart ONT and router in the existing sequence |
 | Numbers | Relay pulse duration, router delay, ping interval, initial reset timeout, repeated reset timeout |
 
-The reset-count sensor's `reset_logs` attribute contains the FIFO's latest 30 entries, oldest first. The external-IP sensor includes a `fresh` attribute. Speed sensors stay unknown until the first completed test; a failed test preserves the last completed results and reports the failure separately. Network/status data becomes unavailable if the device cannot be reached. Request timeouts can temporarily mark it unavailable while TLS/upload work blocks the ESP web server.
+The reset-count sensor's `reset_logs` attribute contains the FIFO's latest 30 entries, oldest first. The external-IP sensor includes a `fresh` attribute. Network/status data becomes unavailable if the device cannot be reached.
 
-Buttons and settings are unavailable while a relay sequence is running. The restart button remains usable while a speed test is active and cancels that test when the ESP processes the command. The API never exposes individual relay on/off switches. A restart is acknowledged before the contacts are opened; brief network loss during the sequence is expected. Commands are **not retried** after timeouts because the device might already have accepted them.
+Buttons and settings are unavailable while a relay sequence is running. The API never exposes individual relay on/off switches. A restart is acknowledged before the contacts are opened; brief network loss during the sequence is expected. Commands are **not retried** after timeouts because the device might already have accepted them.
 
-Settings writes are partial JSON updates, validated and persisted by the device; they begin a fresh monitoring window. The API does not change relay GPIOs or trigger polarity. Those hardware settings remain in the local portal. Speed tests remain ESP8266 throughput checks, consume about 189 MB/day when enabled at five-minute intervals, and do not influence watchdog reset decisions.
+Settings writes are partial JSON updates, validated and persisted by the device; they begin a fresh monitoring window. The API does not change relay GPIOs or trigger polarity. Those hardware settings remain in the local portal.
 
 ## Local API
 
@@ -54,10 +57,9 @@ Every API endpoint requires `X-API-Key: <device key>`. It returns JSON and `Cach
 | --- | --- | --- |
 | GET | `/api/v1/state` | API version, device identity, network, watchdog/logs, speed results, current settings |
 | POST | `/api/v1/restart` | `202 {"accepted": true}` then the ONT/router sequence |
-| POST | `/api/v1/speed-test` | `202 {"accepted": true}` when queued |
 | POST | `/api/v1/config` | Partial settings update; `200 {"ok": true, "config": {...}}` |
 
-Editable JSON keys are `automaticSpeedTest` (boolean), `pulseMs` (100..10000), `routerDelaySeconds` (1..120), `pingSeconds` (10..3600), `firstSeconds` and `repeatSeconds` (60..86400), and `rotation` (0..3). Numeric values must be integers; unknown fields, strings in numeric fields, empty payloads and invalid values are rejected with 400. Wrong keys receive 401; busy/unavailable operations receive 409; failed persistence receives 500.
+Editable JSON keys are `pulseMs` (100..10000), `routerDelaySeconds` (1..120), `pingSeconds` (10..3600), `firstSeconds` and `repeatSeconds` (60..86400), and `rotation` (0..3). Numeric values must be integers; unknown fields, strings in numeric fields, empty payloads and invalid values are rejected with 400. Wrong keys receive 401; busy/unavailable operations receive 409; failed persistence receives 500.
 
 The API uses local HTTP. The existing local portal has no login and its Home Assistant page displays the API key, so the key does **not** turn the whole device into an authenticated web application. Keep the device and Home Assistant on a trusted LAN and do not expose its HTTP port to the internet. Diagnostics redact network addresses, identity, target and reset log text; the API key is never included in state responses or diagnostics.
 
@@ -78,6 +80,6 @@ python -m compileall -q custom_components
 pio run --project-dir ONT_Watchdog_ESP8266_HA
 ```
 
-CI runs those checks plus HACS validation and hassfest after the repository is pushed. Local artifact packaging is handled by `tools/Package-HaBuild.ps1`; it preserves original files and includes the firmware binary and source. The integration's version is `1.0.0`; the firmware reports `1.1.0-ha`, with local API version `1`.
+CI runs those checks plus HACS validation and hassfest after the repository is pushed. Local artifact packaging is handled by `tools/Package-HaBuild.ps1`; it preserves original files and includes the firmware binary and source. The integration's version is `1.1.0`; the firmware reports `1.2.0-ha`, with local API version `1`.
 
 Support: [support@xtatech.com](mailto:support@xtatech.com), 072 482 4511.

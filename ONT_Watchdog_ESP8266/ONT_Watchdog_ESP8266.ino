@@ -12,7 +12,6 @@
 #include <WiFiManager.h>
 #include "XtatechLogo.h"
 #include "XtatechTftLogo.h"
-#include "EspSpeedTest.h"
 extern "C" {
 #include <user_interface.h>
 }
@@ -38,13 +37,11 @@ struct Configuration {
   uint32_t firstSeconds = 300;
   uint32_t repeatSeconds = 600;
   uint8_t rotation = 0;
-  bool automaticSpeedTest = true;
 };
 
 enum class RestartStage : uint8_t { IDLE, ONT_OFF, WAIT_ROUTER, ROUTER_OFF };
 
 Configuration cfg;
-EspSpeedTest speedTest;
 ESP8266WebServer server(80);
 Adafruit_ST7735 tft(TFT_CS, TFT_DC, TFT_RST);
 Ticker relayPulseTimer;
@@ -148,7 +145,6 @@ void loadState() {
   cfg.firstSeconds = limited(config["firstSeconds"], 300, 60, 86400);
   cfg.repeatSeconds = limited(config["repeatSeconds"], 600, 60, 86400);
   cfg.rotation = limited(config["rotation"], 0, 0, 3);
-  cfg.automaticSpeedTest = config["automaticSpeedTest"] | true;
   resetCount = doc["resetCount"] | 0UL;
   for (JsonVariantConst entry : doc["logs"].as<JsonArrayConst>()) {
     if (!entry.is<const char *>()) continue;
@@ -171,7 +167,6 @@ bool saveState() {
   config["firstSeconds"] = cfg.firstSeconds;
   config["repeatSeconds"] = cfg.repeatSeconds;
   config["rotation"] = cfg.rotation;
-  config["automaticSpeedTest"] = cfg.automaticSpeedTest;
   doc["resetCount"] = resetCount;
   JsonArray logs = doc["logs"].to<JsonArray>();
   uint8_t oldest = (logNext + LOG_CAPACITY - logCount) % LOG_CAPACITY;
@@ -239,7 +234,7 @@ void updateExternalIp() {
     externalIpAttempted = false;
     externalIpFresh = false;
   }
-  if (!connected || !online || stage != RestartStage::IDLE || speedTest.busy()) return;
+  if (!connected || !online || stage != RestartStage::IDLE) return;
   uint32_t now = millis();
   uint32_t interval = externalIpFresh ? 600000UL : 60000UL;
   if (externalIpAttempted && now - lastExternalIpAttemptAt < interval) return;
@@ -305,19 +300,7 @@ void handleStatus() {
   body += networkAddress(WiFi.subnetMask());
   body += F("</div><div><strong>WiFi RSSI</strong><br>");
   body += WiFi.isConnected() ? String(WiFi.RSSI()) + " dBm" : String("Unavailable");
-  body += F("</div></div></section><section><h2>Speed Test</h2><div class='grid'><div><strong>Status</strong><br>");
-  body += htmlEscape(speedTest.status());
-  body += F("</div><div><strong>Download</strong><br>");
-  body += speedTest.hasResult() ? String(speedTest.downloadMbps(), 2) + " Mbps" : String("Not tested");
-  body += F("</div><div><strong>Upload</strong><br>");
-  body += speedTest.hasResult() ? String(speedTest.uploadMbps(), 2) + " Mbps" : String("Not tested");
-  body += F("</div><div><strong>Last completed test</strong><br>");
-  body += speedTest.hasResult() ? String(speedTest.resultAgeSeconds()) + " seconds ago" : String("None");
-  body += F("</div><div><strong>Automatic test</strong><br>");
-  body += cfg.automaticSpeedTest ? String(speedTest.nextTestSeconds()) + " seconds until due" : String("Disabled");
-  body += F("</div></div><p>ESP8266 throughput via Cloudflare, including request overhead. Not a full line-speed measurement.</p><p>512 KiB download + 128 KiB upload per test.</p><form method='post' action='/speed-test'><button type='submit'");
-  if (speedTest.busy() || stage != RestartStage::IDLE || !WiFi.isConnected()) body += F(" disabled");
-  body += F(">Run Speed Test</button></form></section><section><form method='post' action='/manual-restart' onsubmit=\"return confirm('Restart ONT then router?')\"><button class='warn'>Manual Restart</button></form></section>");
+  body += F("</div></div></section><section><form method='post' action='/manual-restart' onsubmit=\"return confirm('Restart ONT then router?')\"><button class='warn'>Manual Restart</button></form></section>");
   server.send(200, "text/html", pageShell("ONT Watchdog", body, true));
 }
 
@@ -363,9 +346,7 @@ void handleConfig() {
     if (cfg.rotation == i) body += F(" selected");
     body += ">" + String(i * 90) + " degrees</option>";
   }
-  body += F("</select></label></div><label><input style='width:auto' type='checkbox' name='automaticSpeedTest' value='1'");
-  if (cfg.automaticSpeedTest) body += F(" checked");
-  body += F("> Automatic speed test every 5 minutes</label><p><button>Save Config</button></p></form></section><section><form method='post' action='/reset-wifi' onsubmit=\"return confirm('Clear WiFi credentials and restart setup?')\"><button class='warn'>Reset WiFi Setup</button></form></section>");
+  body += F("</select></label></div><p><button>Save Config</button></p></form></section><section><form method='post' action='/reset-wifi' onsubmit=\"return confirm('Clear WiFi credentials and restart setup?')\"><button class='warn'>Reset WiFi Setup</button></form></section>");
   // Do not auto-refresh a form while it is being edited.
   server.send(200, "text/html", pageShell("Watchdog Config", body));
 }
@@ -424,7 +405,6 @@ void handleSaveConfig() {
   candidate.firstSeconds = firstTimeout;
   candidate.repeatSeconds = repeatTimeout;
   candidate.rotation = rotation;
-  candidate.automaticSpeedTest = server.hasArg("automaticSpeedTest");
   Configuration previous = cfg;
   cfg = candidate;
   if (!saveState()) {
@@ -432,7 +412,6 @@ void handleSaveConfig() {
     server.send(500, "text/plain", "Could not save configuration to flash.");
     return;
   }
-  speedTest.cancel(F("Cancelled: configuration changed"));
   initialiseRelays();
   tft.setRotation(cfg.rotation);
   WiFi.hostname(cfg.device);
@@ -444,17 +423,6 @@ void handleSaveConfig() {
 }
 
 void setupWebServer() {
-  server.on("/speed-test", HTTP_POST, []() {
-    if (stage != RestartStage::IDLE || !WiFi.isConnected()) {
-      server.send(409, "text/plain", "Speed test unavailable while offline or restarting.");
-      return;
-    }
-    if (!speedTest.request()) {
-      server.send(409, "text/plain", "A speed test is already queued or running.");
-      return;
-    }
-    redirect("/");
-  });
   server.on("/", HTTP_GET, handleStatus);
   server.on("/logs", HTTP_GET, handleLogs);
   server.on("/support", HTTP_GET, handleSupport);
@@ -478,7 +446,6 @@ void setupWebServer() {
       return;
     }
     server.send(200, "text/plain", "WiFi cleared. Connect to ONT-Watchdog-Setup after reboot.");
-    speedTest.cancel(F("Cancelled: WiFi setup reset"));
     delay(200);
     WiFiManager wm;
     wm.resetSettings();
@@ -490,7 +457,6 @@ void setupWebServer() {
 
 void startRestart(const String &reason) {
   if (stage != RestartStage::IDLE) return;
-  speedTest.cancel(F("Cancelled: device restart"));
   addResetLog(reason);
   online = false;
   externalIpAttempted = false;
@@ -536,7 +502,7 @@ void evaluateWatchdog() {
   if (stage != RestartStage::IDLE) return;
   uint32_t now = millis();
   if (!WiFi.isConnected()) online = false;
-  if (!speedTest.running() && (!pingAttempted || now - lastPingAt >= uint32_t(cfg.pingSeconds) * ONE_SECOND)) {
+  if (!pingAttempted || now - lastPingAt >= uint32_t(cfg.pingSeconds) * ONE_SECOND) {
     pingAttempted = true;
     lastPingAt = now;
     online = WiFi.isConnected() && Ping.ping(cfg.target, 1);
@@ -643,7 +609,6 @@ void setup() {
   displayMessage("XTATECH", "ONT Watchdog\nStarting...");
   setupWifi();
   setupWebServer();
-  speedTest.begin();
   monitoringSince = millis();
 }
 
@@ -651,9 +616,6 @@ void loop() {
   updateRestart();
   server.handleClient();
   evaluateWatchdog();
-  speedTest.update(cfg.automaticSpeedTest,
-                   stage == RestartStage::IDLE && online && millis() - lastPingAt < 5000UL,
-                   WiFi.isConnected() && stage == RestartStage::IDLE);
   updateExternalIp();
   updateDisplay();
   yield();

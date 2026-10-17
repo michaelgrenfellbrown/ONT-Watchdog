@@ -11,7 +11,6 @@ FLAGS = (
     ("restart", "watchdog", "restart_in_progress", "Restart in progress", None, False),
     ("recovery", "watchdog", "recovery_mode", "Recovery mode", None, False),
     ("storage", "watchdog", "storage_ok", "Storage problem", BinarySensorDeviceClass.PROBLEM, True),
-    ("speed_busy", "speed_test", "busy", "Speed test active", None, False),
     ("dhcp", "network", "dhcp", "DHCP enabled", None, False),
 )
 

@@ -2,9 +2,9 @@
 
 ## Home Assistant and HACS
 
-The Home Assistant edition is a separate copy in [ONT_Watchdog_ESP8266_HA](ONT_Watchdog_ESP8266_HA/ONT_Watchdog_ESP8266_HA.ino). The original ESP8266 sketch remains unchanged, with a preserved source/binary build in [builds/esp8266-standalone-2026-10-15.zip](builds/esp8266-standalone-2026-10-15.zip).
+The Home Assistant edition is a separate copy in [ONT_Watchdog_ESP8266_HA](ONT_Watchdog_ESP8266_HA/ONT_Watchdog_ESP8266_HA.ino). The earlier ESP8266 source/binary build is preserved in [builds/esp8266-standalone-2026-10-15.zip](builds/esp8266-standalone-2026-10-15.zip); current sketches are maintained separately from that archive.
 
-The custom integration is in `custom_components/xtatech_watchdog/`, with HACS metadata at the repository root. It provides network/connectivity sensors, logs, throughput results, restart/speed-test buttons and timing controls over a local API. Follow the [Home Assistant installation guide](docs/HOME_ASSISTANT.md) for flashing, API-key setup and HACS installation. In HACS, add [michaelgrenfellbrown/ONT-Watchdog](https://github.com/michaelgrenfellbrown/ONT-Watchdog) as a custom repository of type **Integration**, download it, restart Home Assistant, and add **Xtatech ONT Watchdog** under Devices & services.
+The custom integration is in `custom_components/xtatech_watchdog/`, with HACS metadata at the repository root. It provides network/connectivity sensors, logs, a restart button and timing controls over a local API. Speed testing has been removed from both current ESP8266 sketches and the integration. Follow the [Home Assistant installation guide](docs/HOME_ASSISTANT.md) for flashing, API-key setup and HACS installation. In HACS, add [michaelgrenfellbrown/ONT-Watchdog](https://github.com/michaelgrenfellbrown/ONT-Watchdog) as a custom repository of type **Integration**, download it, restart Home Assistant, and add **Xtatech ONT Watchdog** under Devices & services.
 
 ## Original Firmware
 

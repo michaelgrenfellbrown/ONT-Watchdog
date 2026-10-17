@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import math
 import re
 from typing import Any
 
@@ -43,7 +42,7 @@ def validate_state(data: Any) -> dict[str, Any]:
     """Check the fields entities depend on before accepting a snapshot."""
     if not isinstance(data, dict) or type(data.get("api_version")) is not int or data["api_version"] != 1:
         raise WatchdogProtocolError("Unsupported firmware API; install the HA firmware variant")
-    for section in ("device", "network", "watchdog", "speed_test", "config"):
+    for section in ("device", "network", "watchdog", "config"):
         if not isinstance(data.get(section), dict):
             raise WatchdogProtocolError(f"Missing {section} object")
     for key in ("id", "name", "model", "firmware"):
@@ -54,8 +53,6 @@ def validate_state(data: Any) -> dict[str, Any]:
     for section, fields in (
         ("network", ("connected", "dhcp", "external_ip_fresh")),
         ("watchdog", ("online", "restart_in_progress", "recovery_mode", "storage_ok")),
-        ("speed_test", ("busy", "has_result")),
-        ("config", ("automaticSpeedTest",)),
     ):
         if any(type(data[section].get(key)) is not bool for key in fields):
             raise WatchdogProtocolError(f"Invalid boolean in {section}")
@@ -69,7 +66,7 @@ def validate_state(data: Any) -> dict[str, Any]:
         raise WatchdogProtocolError("Invalid uptime")
     for section, fields in (
         ("network", ("ip", "gateway", "subnet", "dns_primary", "dns_secondary", "ssid")),
-        ("watchdog", ("status",)), ("speed_test", ("status",)), ("config", ("target",)),
+        ("watchdog", ("status",)), ("config", ("target",)),
     ):
         if any(not isinstance(data[section].get(key), str) for key in fields):
             raise WatchdogProtocolError(f"Invalid text field in {section}")
@@ -80,11 +77,6 @@ def validate_state(data: Any) -> dict[str, Any]:
         raise WatchdogProtocolError("Invalid RSSI")
     if data["network"].get("external_ip") is not None and not isinstance(data["network"]["external_ip"], str):
         raise WatchdogProtocolError("Invalid external IP")
-    if data["speed_test"]["has_result"]:
-        for key in ("download_mbps", "upload_mbps", "result_age_seconds"):
-            value = data["speed_test"].get(key)
-            if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
-                raise WatchdogProtocolError("Invalid speed-test result")
     return data
 
 
@@ -136,7 +128,7 @@ class WatchdogApi:
         return validate_state(await self.request("GET", "state"))
 
     async def command(self, command: str) -> None:
-        if command not in ("restart", "speed-test"):
+        if command != "restart":
             raise ValueError("Unknown command")
         response = await self.request("POST", command)
         if response.get("accepted") is not True:

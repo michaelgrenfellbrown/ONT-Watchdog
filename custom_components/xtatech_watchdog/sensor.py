@@ -1,7 +1,7 @@
-"""Watchdog, network and measured-throughput sensors."""
+"""Watchdog and network sensors."""
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
-from homeassistant.const import EntityCategory, UnitOfDataRate, UnitOfTime, SIGNAL_STRENGTH_DECIBELS_MILLIWATT
+from homeassistant.const import EntityCategory, UnitOfTime, SIGNAL_STRENGTH_DECIBELS_MILLIWATT
 
 from .entity import WatchdogEntity
 
@@ -18,10 +18,6 @@ SENSORS = (
     ("status", "watchdog", "status", "Watchdog status", None, None),
     ("reset_count", "watchdog", "reset_count", "Reset count", None, None),
     ("outage_seconds", "watchdog", "outage_seconds", "Outage duration", UnitOfTime.SECONDS, SensorDeviceClass.DURATION),
-    ("download", "speed_test", "download_mbps", "ESP8266 download", UnitOfDataRate.MEGABITS_PER_SECOND, SensorDeviceClass.DATA_RATE),
-    ("upload", "speed_test", "upload_mbps", "ESP8266 upload", UnitOfDataRate.MEGABITS_PER_SECOND, SensorDeviceClass.DATA_RATE),
-    ("speed_status", "speed_test", "status", "Speed test status", None, None),
-    ("speed_age", "speed_test", "result_age_seconds", "Speed result age", UnitOfTime.SECONDS, SensorDeviceClass.DURATION),
     ("ping_target", "config", "target", "Ping target", None, None),
     ("uptime", None, "uptime_seconds", "Uptime", UnitOfTime.SECONDS, SensorDeviceClass.DURATION),
 )
@@ -38,7 +34,7 @@ class WatchdogSensor(WatchdogEntity, SensorEntity):
         self.key = key
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
-        if key in ("download", "upload", "rssi", "outage_seconds", "uptime", "speed_age"):
+        if key in ("rssi", "outage_seconds", "uptime"):
             self._attr_state_class = SensorStateClass.MEASUREMENT
         if self.section == "network" or key in ("uptime", "ping_target"):
             self._attr_entity_category = EntityCategory.DIAGNOSTIC
